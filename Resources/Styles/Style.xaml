@@ -4,7 +4,7 @@
     <!-- 윈도우 스타일 -->
     <Style x:Key="windowStyle" TargetType="Window">
         <Setter Property="Width" Value="352"/>
-        <Setter Property="Height" Value="425"/>
+        <Setter Property="Height" Value="475"/>
         <Setter Property="ResizeMode" Value="NoResize" />
         <Setter Property="WindowStyle" Value="None" />
         <Setter Property="WindowState" Value="Normal" />

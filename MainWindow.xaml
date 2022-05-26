@@ -64,7 +64,7 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Row="0" Grid.Column="0" Width="80" >
-                            <ComboBox Name="runType" Style="{StaticResource comboStyle}" Width="80" >
+                            <ComboBox Name="runType" Style="{StaticResource comboStyle}" Width="80" SelectionChanged="runType_SelectionChanged">
                                 <ComboBoxItem IsSelected="True">Server</ComboBoxItem>
                                 <ComboBoxItem>Client</ComboBoxItem>
                             </ComboBox>
@@ -85,7 +85,7 @@
                         <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="0, 10, 0, 0" Width="330">
                             <StackPanel Orientation="Horizontal">
                                 <StackPanel Width="200">
-                                    <ComboBox Name="encoding" Style="{StaticResource comboStyle}" HorizontalAlignment="Left" Width="80">
+                                    <ComboBox Name="mainEncoding" Style="{StaticResource comboStyle}" HorizontalAlignment="Left" Width="80" SelectionChanged="encoding_SelectionChanged">
                                         <ComboBoxItem IsSelected="True">UTF-8</ComboBoxItem>
                                         <ComboBoxItem>UNICODE</ComboBoxItem>
                                         <ComboBoxItem>EUC-KR</ComboBoxItem>
@@ -95,7 +95,7 @@
                                     <Label Style="{StaticResource labelStyle}" HorizontalAlignment="Right" HorizontalContentAlignment="Right">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Style="{StaticResource textBlockStyle}" Text="상태 : "/>
-                                            <TextBlock Name="state" Style="{StaticResource textBlockStyle}" Width="40" TextAlignment="Right" Text="미접속"/>
+                                            <TextBlock Name="state" Style="{StaticResource textBlockStyle}" TextAlignment="Right" Text="미접속"/>
                                         </StackPanel>                                        
                                     </Label>
                                     <!--Content="상태 : 미접속"/>-->
@@ -117,29 +117,29 @@
                         </Grid.RowDefinitions>
 
                         <StackPanel Grid.Row="0" Margin="0, 10, 0, 0" >
-                            <RichTextBox Name="log" Style="{StaticResource richTextBoxStyle}" Width="330" Height="200" IsReadOnly="True"/>
+                            <RichTextBox Name="log" Style="{StaticResource richTextBoxStyle}" Width="330" Height="250" IsReadOnly="True"/>
                         </StackPanel>
 
                         <StackPanel Grid.Row="1">
                             <StackPanel Orientation="Horizontal"  Margin="0, 10, 0, 0">
-                                <Button Style="{StaticResource buttonStyle}" Width="50" Margin="0, 0, 20, 0" Content="비우기"/>
+                                <Button Style="{StaticResource buttonStyle}" Width="50" Margin="0, 0, 20, 0" Content="비우기" Click="Button_Click"/>
                                 <TextBlock Name="recent" Style="{StaticResource textBlockStyle}" Width="80" Text="최근 데이터 : "/>
                                 <TextBox Name="receiveData" Style="{StaticResource textBoxStyle}" Foreground="#666666" Width="180" TextAlignment="Left" IsReadOnly="True" Text="데이터가 없습니다."/>
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal"  Margin="0, 20, 0, 0">
-                                <ComboBox Name="encoding2" Style="{StaticResource comboStyle}" HorizontalAlignment="Left" Width="80">
+                                <ComboBox Name="sendEncoding" Style="{StaticResource comboStyle}" HorizontalAlignment="Left" Width="80" SelectionChanged="encoding2_SelectionChanged">
                                     <ComboBoxItem IsSelected="True">UTF-8</ComboBoxItem>
                                     <ComboBoxItem>UNICODE</ComboBoxItem>
                                     <ComboBoxItem>EUC-KR</ComboBoxItem>
                                 </ComboBox>                                
                                 <TextBox Name="sendMsg" Style="{StaticResource textBoxStyle}" Width="190" Margin="10, 0, 10, 0" HorizontalContentAlignment="Left"/>
-                                <Button Name="send" Style="{StaticResource buttonStyle}" Width="40" Content="전송"/>
+                                <Button Name="send" Style="{StaticResource buttonStyle}" Width="40" Content="전송" Click="send_Click"/>
                             </StackPanel>
                             
                             <StackPanel Orientation="Horizontal"  Margin="0, 10, 0, 0" >
                                 <TextBox Name="autoSendMsg" Style="{StaticResource textBoxStyle}" Width="230" Margin="0, 0, 10, 0" HorizontalContentAlignment="Left"/>
-                                <Button Name="autoSend" Style="{StaticResource buttonStyle}" Width="90" Content="자동 전송 ON"/>
+                                <Button Name="autoSend" Style="{StaticResource buttonStyle}" Width="90" Content="자동 전송 ON" Click="autoSend_Click"/>
                             </StackPanel>
                         </StackPanel>                        
                     </Grid>
