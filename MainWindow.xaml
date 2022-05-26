@@ -79,7 +79,6 @@
 
                         <StackPanel Grid.Row="0" Grid.Column="3" Width="40" Orientation="Horizontal" HorizontalAlignment="Right">
                             <Button Name="openBtn" Style="{StaticResource buttonStyle}" Width="40" Content="시작" Click="openBtn_Click"/>
-                            <Button Name="closeBtn" Style="{StaticResource buttonStyle}" Width="40" Visibility="Collapsed">종료</Button>
                         </StackPanel>
 
                         <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="0, 10, 0, 0" Width="330">

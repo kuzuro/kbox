@@ -29,7 +29,6 @@ namespace kbox
         public bool autoSendFlag = false;
         public string autoSendContent = "";
 
-        private Thread userThread;
         private Thread connCountThread;
 
         public RunTypeSelector runTypeSelector;
@@ -45,9 +44,14 @@ namespace kbox
         }
 
 
-
         #region 윈도우 기본
 
+
+        /// <summary>
+        /// 타이틀바 드래그
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void StackPanel_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (Mouse.LeftButton == MouseButtonState.Pressed)
@@ -57,23 +61,51 @@ namespace kbox
 
         }
 
+
+        /// <summary>
+        /// 프로그램 최소화
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void btn_minimized_Click(object sender, RoutedEventArgs e)
         {
             WindowState = WindowState.Minimized;
         }
 
+
+        /// <summary>
+        /// 프로그램 종료
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void btn_close_Click(object sender, RoutedEventArgs e)
         {
             programExit();
         }
 
+
+        /// <summary>
+        /// 서버 및 클라이언트 종료 후 프로그램 종료
+        /// </summary>
         public void programExit()
         {
-            Environment.Exit(1);
+
+            // 서버가 실행중이면 종료
+            if (startFlag)
+            {
+                Server.Stop();
+            }
+
+
+            // 클라이언트가 실행중이면 종료
+            // code
+
+
+
+            Environment.Exit(0);
         }
 
         #endregion
-
 
 
         /// <summary>
@@ -89,7 +121,6 @@ namespace kbox
             portNum.Text = "8899";
 
             openBtn.Visibility = Visibility.Visible;
-            closeBtn.Visibility = Visibility.Collapsed;
 
             mainEncoding.SelectedIndex = 0;
             mainEncodingSelect = EncodingSelector.UTF8;
@@ -111,6 +142,12 @@ namespace kbox
 
         }
 
+
+        /// <summary>
+        /// 시작/종료
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void openBtn_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -150,6 +187,8 @@ namespace kbox
 
                         log.Document.Blocks.Clear();
                         receiveData.Text = "데이터가 없습니다.";
+
+                        state.Text = "미접속";
                     }
                     else
                     {
@@ -221,6 +260,11 @@ namespace kbox
         }
 
 
+        /// <summary>
+        /// 메인 인코딩 설정
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void mainEncoding_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             switch (mainEncoding.SelectedIndex)
@@ -240,6 +284,11 @@ namespace kbox
         }
 
 
+        /// <summary>
+        /// 전송 인코딩 설정
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void sendEncoding_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             switch (sendEncoding.SelectedIndex)
@@ -257,7 +306,6 @@ namespace kbox
                     break;
             }
         }
-
 
 
         /// <summary>
