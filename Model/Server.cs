@@ -1,4 +1,5 @@
-﻿using System;
+﻿using kbox.EnumClass;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -11,8 +12,8 @@ namespace kbox.Model
     {
         static private bool serverState = false;
 
+        static public List<String> userList = new List<String>();
         static public int connCount = 0;
-
 
         static public Socket ServerSocket;
         static private List<Socket> ClientSocketList;
@@ -23,7 +24,8 @@ namespace kbox.Model
 
 
         static Encoding UTF8 = Encoding.UTF8;
-        static Encoding euckr = Encoding.GetEncoding(51949);
+        static Encoding UNICODE = Encoding.Unicode;
+        static Encoding EUCKR = Encoding.GetEncoding(51949);
 
 
 
@@ -93,7 +95,7 @@ namespace kbox.Model
             {
                 if (ClientSocketList != null)
                 {
-                    connCount = ClientSocketList.Count;
+
 
                     Socket ClientSocket = e.AcceptSocket;
                     ClientSocketList.Add(ClientSocket);
@@ -107,14 +109,28 @@ namespace kbox.Model
 
                     e.AcceptSocket = null;
                     ServerSocket.AcceptAsync(e);
+
+
+                    userList.Clear();
+
+                    ServerInfo();
+
+                    /*
+                    // 접속자 목록화
+                    for (int i = 0; i < ClientSocketList.Count; i++)
+                    {
+                        userList.Add(ClientSocket.RemoteEndPoint.ToString());
+                    }
+
+                    // 접속자 갱신
+                    connCount = ClientSocketList.Count;
+                    */
                 }
             }
             catch (SocketException ex)
             {
                 Console.WriteLine(ex.Message);
             }
-
-
         }
 
 
@@ -124,15 +140,22 @@ namespace kbox.Model
 
             if(ClientSocket.Connected && (e.BytesTransferred > 0))
             {
-                connCount = ClientSocketList.Count;
 
                 buffer = e.Buffer;
 
-                // 인코딩 추가
                 string data = "";
-
-
-                data = UTF8.GetString(buffer).Replace("\0", "").Trim();
+                if (mw.mainEncodingSelect == EncodingSelector.UTF8)
+                {
+                    data = UTF8.GetString(buffer).Replace("\0", "").Trim();
+                }
+                else if (mw.sendEncodingSelect == EncodingSelector.UNICODE)
+                {
+                    data = UNICODE.GetString(buffer).Replace("\0", "").Trim();
+                }
+                else
+                {
+                    data = EUCKR.GetString(buffer).Replace("\0", "").Trim();
+                }
 
                 mw.appendLog(data);
 
@@ -144,44 +167,120 @@ namespace kbox.Model
                 e.SetBuffer(buffer, 0, bufferSize);
                 ClientSocket.ReceiveAsync(e);
 
+
+                // 자동 전송
                 if(mw.autoSendFlag)
                 {
-                    Send();
+                    AutoSend();
                 }
 
-            } 
+                userList.Clear();
+
+                ServerInfo();
+                /*
+                // 접속자 목록화
+                for (int i = 0; i < ClientSocketList.Count; i++)
+                {
+                    userList.Add(ClientSocket.RemoteEndPoint.ToString());
+                }
+
+                // 접속자 갱신
+                connCount = ClientSocketList.Count;
+                */
+
+            }
             else {
 
                 ClientSocket.Disconnect(false);
                 ClientSocketList.Remove(ClientSocket);
                 mw.appendLog(string.Concat("[접속 해제 : ", ClientSocket.RemoteEndPoint.ToString(), "]"));
+
+                userList.Clear();
+
+                ServerInfo();
+
+                /*
+                // 접속자 목록화
+                for (int i = 0; i < ClientSocketList.Count; i++)
+                {
+                    userList.Add(ClientSocketList[i].RemoteEndPoint.ToString());
+                }
+
+                // 접속자 갱신
+                connCount = ClientSocketList.Count;
+                */
             }
         }
 
 
-        private static void Send()
+        /// <summary>
+        /// 자동 전송
+        /// </summary>
+        private static void AutoSend()
         {
-            byte[] sendData;
-
-
-            // 인코딩 분기
-
-            sendData = UTF8.GetBytes(mw.autoSendContent);
-
+            byte[] sendData = Encoder(mw.sendEncodingSelect, mw.autoSendContent);
 
             for (int i = 0; i < ClientSocketList.Count; i++)
             {
                 ClientSocketList[i].Send(sendData, sendData.Length, SocketFlags.None);
             }
+        }
 
 
+        /// <summary>
+        /// 전송
+        /// </summary>
+        /// <param name="sendMsg"></param>
+        public static void Send(string sendMsg)
+        {
+            byte[] sendData = Encoder(mw.sendEncodingSelect, sendMsg);
 
+            for (int i = 0; i < ClientSocketList.Count; i++)
+            {
+                ClientSocketList[i].Send(sendData, sendData.Length, SocketFlags.None);
+            }
         }
 
 
 
+        /// <summary>
+        /// 인코딩 변경
+        /// </summary>
+        /// <param name="endcode"></param>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        private static byte[] Encoder(EncodingSelector endcode, string data)
+        {
+            byte[] result;
+
+            if (endcode == EncodingSelector.UTF8)
+            {
+                result = UTF8.GetBytes(data);
+            }
+            else if (endcode == EncodingSelector.UNICODE)
+            {
+                result = UNICODE.GetBytes(data);
+            }
+            else
+            {
+                result = EUCKR.GetBytes(data);
+            }
+
+            return result;
+        }
 
 
+
+        /// <summary>
+        /// 접속자가 발생하거나 메시지가 오면 동작
+        /// </summary>
+        private static void ServerInfo()
+        {
+
+
+            // 접속자 갱신
+            connCount = ClientSocketList.Count;
+        }
 
     }
 }

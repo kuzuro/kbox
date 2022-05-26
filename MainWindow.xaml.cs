@@ -29,6 +29,7 @@ namespace kbox
         public bool autoSendFlag = false;
         public string autoSendContent = "";
 
+        private Thread userThread;
         private Thread connCountThread;
 
         public RunTypeSelector runTypeSelector;
@@ -83,6 +84,7 @@ namespace kbox
             runType.SelectedIndex = 0;
             runTypeSelector = RunTypeSelector.Server;
 
+            // 프로퍼티에서 불러오도록 수정
             ipAddr.Text = "127.0.0.1";
             portNum.Text = "8899";
 
@@ -104,7 +106,6 @@ namespace kbox
 
             autoSendMsg.Text = "";
             autoSendFlag = false;
-
             
             controller.IsEnabled = false;
 
@@ -128,8 +129,6 @@ namespace kbox
                         connCountThread = new Thread(getConnCount);
                         connCountThread.IsBackground = true;
                         connCountThread.Start();
-
-
                     }
                     else
                     {
@@ -161,18 +160,18 @@ namespace kbox
                     openBtn.Content = "시작";
                 }
 
-
-
             }
             catch (Exception ex)
             {
                 appendLog("시작할 수 없는 상태입니다.");
             }
-
-
         }
 
 
+        /// <summary>
+        /// 로그에 출력
+        /// </summary>
+        /// <param name="content"></param>
         public void appendLog(string content)
         {
             Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(delegate
@@ -185,20 +184,16 @@ namespace kbox
         }
 
 
+        /// <summary>
+        /// 접속자 표시
+        /// </summary>
         private void getConnCount()
         {
-
-
             while(startFlag)
             {
-
                 Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(delegate
                 {
-
-                    int count = Server.connCount;
-                    state.Text = string.Concat("접속(", count, ")");
-
-
+                    state.Text = string.Concat("접속(", Server.connCount, ")");
                 }));
 
                 Thread.Sleep(1000);
@@ -228,31 +223,91 @@ namespace kbox
 
         private void mainEncoding_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            switch (mainEncoding.SelectedIndex)
+            {
+                case 0:
+                    mainEncodingSelect = EncodingSelector.UTF8;
+                    break;
 
+                case 1:
+                    mainEncodingSelect = EncodingSelector.UNICODE;
+                    break;
+
+                case 2:
+                    mainEncodingSelect = EncodingSelector.EUCKR;
+                    break;
+            }
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-
-        }
 
         private void sendEncoding_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            switch (sendEncoding.SelectedIndex)
+            {
+                case 0:
+                    sendEncodingSelect = EncodingSelector.UTF8;
+                    break;
 
+                case 1:
+                    sendEncodingSelect = EncodingSelector.UNICODE;
+                    break;
+
+                case 2:
+                    sendEncodingSelect = EncodingSelector.EUCKR;
+                    break;
+            }
         }
 
+
+
+        /// <summary>
+        /// 전송
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void send_Click(object sender, RoutedEventArgs e)
         {
-
+            Server.Send(sendMsg.Text.Trim());
         }
 
+
+        /// <summary>
+        /// 자동 전송 토글
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void autoSend_Click(object sender, RoutedEventArgs e)
         {
-
+            if (!autoSendFlag)
+            {
+                autoSendFlag = true;
+                autoSend.Content = "자동 전송 ON";
+                autoSendContent = autoSendMsg.Text.Trim();
+            }
+            else
+            {
+                autoSendFlag = false;
+                autoSend.Content = "자동 전송 OFF";
+                autoSendContent = "";
+            }
         }
 
 
+        /// <summary>
+        /// 로그 삭제
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void cleanButton_click(object sender, RoutedEventArgs e)
+        {
+            log.Document.Blocks.Clear();
+            receiveData.Text = "데이터가 없습니다.";
+        }
 
+
+        /// <summary>
+        /// 실행 상태에 따라 컨트롤 활성/비활성화
+        /// </summary>
         private void RunSetting()
         {
             runType.IsEnabled = !startFlag;
