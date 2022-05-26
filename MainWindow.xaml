@@ -1,0 +1,150 @@
+﻿<Window x:Class="kbox.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:kbox"
+        mc:Ignorable="d"        
+        Title="MainWindow"         
+        Style="{StaticResource windowStyle}"        
+        >
+    <Grid Margin="0">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="70*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 타이틀 커스텀 -->
+        <StackPanel Grid.Row="0" Style="{StaticResource titleBar}" MouseLeftButtonDown="StackPanel_MouseLeftButtonDown">
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="50*"/>
+                    <ColumnDefinition Width="50*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <Label Style="{StaticResource titleText}" Content="TITLE"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Name="btn_minimized" Style="{StaticResource transparentButton}" Click="btn_minimized_Click">
+                        <Image Style="{StaticResource minimizedImageButton}" />
+                    </Button>
+                    <Button Name="btn_close" Style="{StaticResource transparentButton}" Click="btn_close_Click">
+                        <Image Style="{StaticResource CloseImageButton}" />
+                    </Button>
+                </StackPanel>
+            </Grid>            
+        </StackPanel>
+
+        <!-- 컨트롤 -->
+        <DockPanel Grid.Row="1">
+            <Grid Margin="10" Width="330">
+                
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- 접속 정보 -->
+                <StackPanel Grid.Row="0" Width="330">
+
+                    <Grid>
+
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition Width="auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Row="0" Grid.Column="0" Width="80" >
+                            <ComboBox Name="runType" Style="{StaticResource comboStyle}" Width="80" >
+                                <ComboBoxItem IsSelected="True">Server</ComboBoxItem>
+                                <ComboBoxItem>Client</ComboBoxItem>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="0" Grid.Column="1" Width="210" Orientation="Horizontal">
+                            <Label Style="{StaticResource labelStyle}" Width="20" Margin="5, 0, 0, 0" Content="IP"/>
+                            <TextBox Name="ipAddr" Style="{StaticResource textBoxStyle}" Width="80" Text=""/>
+                            <Label Style="{StaticResource labelStyle}" Width="40" Content="PORT"/>
+                            <TextBox Name="portNum" Style="{StaticResource textBoxStyle}" Width="50" Text=""/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="0" Grid.Column="3" Width="40" Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Name="openBtn" Style="{StaticResource buttonStyle}" Width="40" Content="시작" Click="openBtn_Click"/>
+                            <Button Name="closeBtn" Style="{StaticResource buttonStyle}" Width="40" Visibility="Collapsed">종료</Button>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="0, 10, 0, 0" Width="330">
+                            <StackPanel Orientation="Horizontal">
+                                <StackPanel Width="200">
+                                    <ComboBox Name="encoding" Style="{StaticResource comboStyle}" HorizontalAlignment="Left" Width="80">
+                                        <ComboBoxItem IsSelected="True">UTF-8</ComboBoxItem>
+                                        <ComboBoxItem>UNICODE</ComboBoxItem>
+                                        <ComboBoxItem>EUC-KR</ComboBoxItem>
+                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel Width="130">
+                                    <Label Style="{StaticResource labelStyle}" HorizontalAlignment="Right" HorizontalContentAlignment="Right">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource textBlockStyle}" Text="상태 : "/>
+                                            <TextBlock Name="state" Style="{StaticResource textBlockStyle}" Width="40" TextAlignment="Right" Text="미접속"/>
+                                        </StackPanel>                                        
+                                    </Label>
+                                    <!--Content="상태 : 미접속"/>-->
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+
+                    </Grid>
+                </StackPanel>
+
+
+                <!-- 로그 및 메시지 제어-->
+                <StackPanel Name="controller" Grid.Row="1" Width="330">
+
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Margin="0, 10, 0, 0" >
+                            <RichTextBox Name="log" Style="{StaticResource richTextBoxStyle}" Width="330" Height="200" IsReadOnly="True"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1">
+                            <StackPanel Orientation="Horizontal"  Margin="0, 10, 0, 0">
+                                <Button Style="{StaticResource buttonStyle}" Width="50" Margin="0, 0, 20, 0" Content="비우기"/>
+                                <TextBlock Name="recent" Style="{StaticResource textBlockStyle}" Width="80" Text="최근 데이터 : "/>
+                                <TextBox Name="receiveData" Style="{StaticResource textBoxStyle}" Foreground="#666666" Width="180" TextAlignment="Left" IsReadOnly="True" Text="데이터가 없습니다."/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal"  Margin="0, 20, 0, 0">
+                                <ComboBox Name="encoding2" Style="{StaticResource comboStyle}" HorizontalAlignment="Left" Width="80">
+                                    <ComboBoxItem IsSelected="True">UTF-8</ComboBoxItem>
+                                    <ComboBoxItem>UNICODE</ComboBoxItem>
+                                    <ComboBoxItem>EUC-KR</ComboBoxItem>
+                                </ComboBox>                                
+                                <TextBox Name="sendMsg" Style="{StaticResource textBoxStyle}" Width="190" Margin="10, 0, 10, 0" HorizontalContentAlignment="Left"/>
+                                <Button Name="send" Style="{StaticResource buttonStyle}" Width="40" Content="전송"/>
+                            </StackPanel>
+                            
+                            <StackPanel Orientation="Horizontal"  Margin="0, 10, 0, 0" >
+                                <TextBox Name="autoSendMsg" Style="{StaticResource textBoxStyle}" Width="230" Margin="0, 0, 10, 0" HorizontalContentAlignment="Left"/>
+                                <Button Name="autoSend" Style="{StaticResource buttonStyle}" Width="90" Content="자동 전송 ON"/>
+                            </StackPanel>
+                        </StackPanel>                        
+                    </Grid>
+                </StackPanel>
+            </Grid>           
+        </DockPanel>        
+    </Grid>
+</Window>
