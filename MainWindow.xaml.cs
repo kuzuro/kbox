@@ -1,19 +1,12 @@
 ﻿using kbox.EnumClass;
 using kbox.Model;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace kbox
@@ -30,6 +23,7 @@ namespace kbox
         public string autoSendContent = "";
 
         private Thread connCountThread;
+        private Thread connStateThread;
 
         public RunTypeSelector runTypeSelector;
         public EncodingSelector mainEncodingSelect;
@@ -113,30 +107,30 @@ namespace kbox
         /// </summary>
         private void Init()
         {
-            runType.SelectedIndex = 0;
-            runTypeSelector = RunTypeSelector.Server;
+            runType.SelectedIndex = Properties.Settings.Default.RUN_TYPE;
+            runTypeSelector = (RunTypeSelector)Properties.Settings.Default.RUN_TYPE;
 
             // 프로퍼티에서 불러오도록 수정
-            ipAddr.Text = "127.0.0.1";
-            portNum.Text = "8899";
+            ipAddr.Text = Properties.Settings.Default.IP;
+            portNum.Text = Properties.Settings.Default.PORT.ToString();
 
             openBtn.Visibility = Visibility.Visible;
 
-            mainEncoding.SelectedIndex = 0;
-            mainEncodingSelect = EncodingSelector.UTF8;
-
+            mainEncoding.SelectedIndex = Properties.Settings.Default.MAIN_ENCODING;
+            mainEncodingSelect = (EncodingSelector)0;
+                
             state.Text = "미접속";
 
             log.Document.Blocks.Clear();
-            receiveData.Text = "데이터가 없습니다.";
+            receiveData.Text = "데이터 없음";
 
-            sendEncoding.SelectedIndex = 0;
-            sendEncodingSelect= EncodingSelector.UTF8;
+            sendEncoding.SelectedIndex = Properties.Settings.Default.SEND_ENCODING;
+            sendEncodingSelect = (EncodingSelector)Properties.Settings.Default.SEND_ENCODING;
 
             sendMsg.Text = "";
 
-            autoSendMsg.Text = "";
-            autoSendFlag = false;
+            autoSendMsg.Text = Properties.Settings.Default.AUTO_SEND_MSG;
+            autoSendFlag = Properties.Settings.Default.AUTO_SEND_FLAG;
             
             controller.IsEnabled = false;
 
@@ -157,52 +151,79 @@ namespace kbox
 
                 if (!startFlag)
                 {
+
+                    string IP = ipAddr.Text.Trim();
+                    int PORT = int.Parse(portNum.Text.Trim());
+
+
+                    // 아이피 정합성 검사
+                    IPAddress ipCheck;
+                    bool vaild = !string.IsNullOrEmpty(IP) && IPAddress.TryParse(IP, out ipCheck);
+
+                    if(!vaild)
+                    {
+                        appendLog("잘못된 IP 형식");
+                        return;
+                    }
+
+                    log.Document.Blocks.Clear();
+
+
                     if (rt == RunTypeSelector.Server)
                     {
-                        Server.Start(ipAddr.Text.Trim(), int.Parse(portNum.Text.Trim()));
+                        Server.Start(IP, PORT);
 
-                        startFlag = true;
-
+                        // 프로그램(서버)에 접속한 클라이언트 확인
                         connCountThread = new Thread(getConnCount);
                         connCountThread.IsBackground = true;
                         connCountThread.Start();
                     }
                     else
                     {
+                        Client.Start(IP, PORT);
+
+                        // 서버에 접속한 상태 표시
+                        connStateThread = new Thread(getConnState);
+                        connStateThread.IsBackground = true;
+                        connStateThread.Start();
 
                     }
 
-                    RunSetting();
-                    openBtn.Content = "중지";
+                    startFlag = true;
 
+                    RunSetting();
+                    SettingSave();
+
+                    openBtn.Content = "중지";
                 }
                 else
                 {
                     if (rt == RunTypeSelector.Server)
                     {
                         Server.Stop();
-                        startFlag = false;
 
                         connCountThread.Abort();
-
-                        log.Document.Blocks.Clear();
-                        receiveData.Text = "데이터가 없습니다.";
-
-                        state.Text = "미접속";
                     }
                     else
                     {
-
+                        Client.Stop();
                     }
 
+                    log.Document.Blocks.Clear();
+                    receiveData.Text = "데이터 없음";
+
+                    state.Text = "미접속";
+
+                    startFlag = false;
                     RunSetting();
+
                     openBtn.Content = "시작";
                 }
 
             }
             catch (Exception ex)
             {
-                appendLog("시작할 수 없는 상태입니다.");
+                appendLog("시작 실패");
             }
         }
 
@@ -217,14 +238,13 @@ namespace kbox
             {
                 log.AppendText(content + "\r");
                 log.ScrollToEnd();
-
                 receiveData.Text = content;
             }));
         }
 
 
         /// <summary>
-        /// 접속자 표시
+        /// 서버 접속자 표시
         /// </summary>
         private void getConnCount()
         {
@@ -238,6 +258,24 @@ namespace kbox
                 Thread.Sleep(1000);
             }       
         }
+
+
+        /// <summary>
+        /// 접속 상태 표시
+        /// </summary>
+        private void getConnState()
+        {
+            while (startFlag)
+            {
+                Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(delegate
+                {
+                    state.Text = string.Concat(Client.connState);
+                }));
+
+                Thread.Sleep(1000);
+            }
+        }
+
 
 
         /// <summary>
@@ -315,7 +353,20 @@ namespace kbox
         /// <param name="e"></param>
         private void send_Click(object sender, RoutedEventArgs e)
         {
-            Server.Send(sendMsg.Text.Trim());
+
+            RunTypeSelector rt = (RunTypeSelector)runType.SelectedIndex;
+
+            if (rt == RunTypeSelector.Server)
+            {
+                Server.Send(sendMsg.Text.Trim());
+            }
+            else
+            {
+                Client.Send(sendMsg.Text.Trim());
+            }
+
+
+                
         }
 
 
@@ -349,7 +400,24 @@ namespace kbox
         private void cleanButton_click(object sender, RoutedEventArgs e)
         {
             log.Document.Blocks.Clear();
-            receiveData.Text = "데이터가 없습니다.";
+            receiveData.Text = "데이터 없음";
+        }
+
+
+        /// <summary>
+        /// 설정 저장 - 서버나 클라이언트를 시작할때마다 저장
+        /// </summary>
+        private void SettingSave()
+        {
+            Properties.Settings.Default.RUN_TYPE = runType.SelectedIndex;
+            Properties.Settings.Default.IP = ipAddr.Text.Trim();
+            Properties.Settings.Default.PORT = int.Parse(portNum.Text.Trim());
+            Properties.Settings.Default.MAIN_ENCODING = mainEncoding.SelectedIndex;
+            Properties.Settings.Default.SEND_ENCODING = sendEncoding.SelectedIndex;
+            Properties.Settings.Default.AUTO_SEND_MSG = autoSendMsg.Text.Trim();
+            Properties.Settings.Default.AUTO_SEND_FLAG = autoSendFlag;
+
+            Properties.Settings.Default.Save();
         }
 
 
@@ -365,5 +433,16 @@ namespace kbox
             controller.IsEnabled = startFlag;
         }
 
+
+        /// <summary>
+        /// 포트번호 입력 마스크
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void portNum_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            Regex regex = new Regex("[^0-9]+");
+            e.Handled = regex.IsMatch(e.Text);
+        }
     }
 }
