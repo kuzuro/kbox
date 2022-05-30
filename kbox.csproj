@@ -61,6 +61,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="EnumClass\AutoSendSelector.cs" />
     <Compile Include="EnumClass\EncodingSelector.cs" />
     <Compile Include="EnumClass\RunTypeSelector.cs" />
     <Compile Include="MainWindow.xaml.cs">

@@ -1,10 +1,7 @@
 ﻿using kbox.Utils;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 
 namespace kbox.Model
 {
@@ -26,6 +23,7 @@ namespace kbox.Model
 
         static MainWindow mw = (MainWindow)System.Windows.Application.Current.MainWindow;
 
+
         static public void Start(string _IP, int _PORT)
         {
             IP = _IP;
@@ -39,8 +37,10 @@ namespace kbox.Model
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex.ToString());
+
                 connState = "접속 실패";
-                mw.appendLog(connState);
+                mw.AppendLog(connState);
                 Stop();
             }
         }
@@ -48,12 +48,23 @@ namespace kbox.Model
 
         static public void Stop()
         {
-            if(serverSocket != null)
+            try
             {
-                serverSocket.Disconnect(false);
+                if (serverSocket != null)
+                {
+                    serverSocket.Disconnect(false);
+                }
+
+                if(clientSocket != null)
+                {
+                    clientSocket.Disconnect(false);
+                }
+                
             }
-            
-            clientSocket.Disconnect(false);
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
 
             mw.startFlag = false;
             clientState = false;
@@ -83,14 +94,14 @@ namespace kbox.Model
                 connState = "접속중";
 
                 socket.EndConnect(IAR);
-                clientSocket = socket;
-                clientSocket.BeginReceive(buffer, 0, bufferSize, SocketFlags.None, new AsyncCallback(ReceiveCallBack), serverSocket);
 
+                clientSocket = socket;
+                clientSocket.BeginReceive(buffer, 0, bufferSize, SocketFlags.None, new AsyncCallback(ReceiveCallBack), clientSocket);
             }
             catch (Exception ex)
             {
-                connState = string.Concat("실패 : ", ex.Message);
-                mw.appendLog(connState);
+                Console.WriteLine(ex.ToString());
+
                 Stop();
             }
         }
@@ -105,20 +116,30 @@ namespace kbox.Model
 
                 if(readSize > 0)
                 {
-                    string data = EncodingConverter.ConvertString(mw.mainEncodingSelect, buffer).Replace("\0", ""); ;
-                    mw.appendLog(data);
+                    string data = EncodingConverter.ConvertString(mw.mainEncodingSelect, buffer).Replace("\0", "");
+                    mw.AppendLog(data);
                 }
 
-
+                Receive(readSize);
             }
             catch(Exception ex)
             {
-                connState = string.Concat("실패 : ", ex.Message);
-                mw.appendLog(connState);
+                Console.WriteLine(ex.ToString());
                 Stop();
             }
         }
 
+
+        static private void Receive(int readSize)
+        {
+            clientSocket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, new AsyncCallback(ReceiveCallBack), clientSocket);
+
+            // 받았던 데이터의 크기만큼 반복해서 0으로 초기화
+            for (int i = 0; i < readSize; i++)
+            {
+                buffer[i] = (byte)0;
+            }
+        }
 
 
         /// <summary>
@@ -132,23 +153,19 @@ namespace kbox.Model
                 if(clientSocket.Connected)
                 {
                     byte[] sendData = EncodingConverter.ConvertByte(mw.sendEncodingSelect, sendMsg);
-
                     serverSocket.Send(sendData, sendData.Length, SocketFlags.None);
-                    //serverSocket.BeginSend(sendData, 0, sendData.Length, SocketFlags.None, new AsyncCallback(SendCallBack), clientSocket);
-
                 }
                 else
                 {
-                    mw.appendLog("접속이 끊어졌습니다.");
+                    mw.AppendLog("접속이 끊어졌습니다.");
                 }
 
             }
             catch (Exception ex)
             {
-
+                Console.WriteLine(ex.ToString());
             }
         }
-
 
 
         /// <summary>
@@ -159,17 +176,6 @@ namespace kbox.Model
         {
             return clientState;
         }
-
-
-
-
-        static private void SendCallBack(IAsyncResult IAR)
-        {
-
-        }
-
-
-
 
 
     }

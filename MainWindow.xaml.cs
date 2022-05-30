@@ -23,15 +23,13 @@ namespace kbox
         public bool autoSendFlag = false;
         public string autoSendMsgContent = "";
 
-        private Thread serverStateThread;
-        private Thread clientStateThread;
-
         private Thread connCountThread;
         private Thread connStateThread;
 
         public RunTypeSelector runTypeSelector;
         public EncodingSelector mainEncodingSelect;
         public EncodingSelector sendEncodingSelect;
+        public AutoSendSelector autoSendSelector;
         
 
         public MainWindow()
@@ -65,7 +63,7 @@ namespace kbox
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void btn_minimized_Click(object sender, RoutedEventArgs e)
+        private void Btn_minimized_Click(object sender, RoutedEventArgs e)
         {
             WindowState = WindowState.Minimized;
         }
@@ -76,16 +74,16 @@ namespace kbox
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void btn_close_Click(object sender, RoutedEventArgs e)
+        private void Btn_close_Click(object sender, RoutedEventArgs e)
         {
-            programExit();
+            ProgramExit();
         }
 
 
         /// <summary>
         /// 서버 및 클라이언트 종료 후 프로그램 종료
         /// </summary>
-        public void programExit()
+        public void ProgramExit()
         {
 
             // 서버가 실행중이면 종료
@@ -114,7 +112,7 @@ namespace kbox
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void openBtn_Click(object sender, RoutedEventArgs e)
+        private void OpenBtn_Click(object sender, RoutedEventArgs e)
         {
             try
             {
@@ -130,7 +128,7 @@ namespace kbox
             }
             catch (Exception ex)
             {
-                //appendLog("시작 실패");
+                Console.WriteLine(ex.ToString());
             }
         }
 
@@ -140,7 +138,7 @@ namespace kbox
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void runType_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void RunType_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             switch (runType.SelectedIndex)
             {
@@ -160,22 +158,9 @@ namespace kbox
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void mainEncoding_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void MainEncoding_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            switch (mainEncoding.SelectedIndex)
-            {
-                case 0:
-                    mainEncodingSelect = EncodingSelector.UTF8;
-                    break;
-
-                case 1:
-                    mainEncodingSelect = EncodingSelector.UNICODE;
-                    break;
-
-                case 2:
-                    mainEncodingSelect = EncodingSelector.EUCKR;
-                    break;
-            }
+            Encoding_Selector((sender as ComboBox));
         }
 
 
@@ -184,22 +169,9 @@ namespace kbox
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void sendEncoding_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void SendEncoding_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            switch (sendEncoding.SelectedIndex)
-            {
-                case 0:
-                    sendEncodingSelect = EncodingSelector.UTF8;
-                    break;
-
-                case 1:
-                    sendEncodingSelect = EncodingSelector.UNICODE;
-                    break;
-
-                case 2:
-                    sendEncodingSelect = EncodingSelector.EUCKR;
-                    break;
-            }
+            Encoding_Selector((sender as ComboBox));
         }
 
 
@@ -208,7 +180,7 @@ namespace kbox
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void send_Click(object sender, RoutedEventArgs e)
+        private void Send_Click(object sender, RoutedEventArgs e)
         {
             if (runTypeSelector == RunTypeSelector.Server)
             {
@@ -218,9 +190,6 @@ namespace kbox
             {
                 Client.Send(sendMsg.Text.Trim());
             }
-
-
-
         }
 
 
@@ -229,9 +198,9 @@ namespace kbox
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void autoSend_Click(object sender, RoutedEventArgs e)
+        private void AutoSend_Click(object sender, RoutedEventArgs e)
         {
-            autoSendSetting();
+            AutoSendSetting();
         }
 
 
@@ -240,7 +209,7 @@ namespace kbox
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void cleanButton_click(object sender, RoutedEventArgs e)
+        private void CleanButton_click(object sender, RoutedEventArgs e)
         {
             log.Document.Blocks.Clear();
             receiveData.Text = "데이터 없음";
@@ -252,10 +221,36 @@ namespace kbox
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void portNum_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        private void PortNum_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
             Regex regex = new Regex("[^0-9]+");
             e.Handled = regex.IsMatch(e.Text);
+        }
+
+
+        /// <summary>
+        /// 자동 전송 타입
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void AutoSendType_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if(autoSendMsg == null)
+            {
+                return;
+            }
+
+            autoSendSelector = (AutoSendSelector)autoSendType.SelectedIndex;
+
+            if(autoSendSelector == AutoSendSelector.Receive)
+            {
+                autoSendMsg.IsEnabled = false;
+            } 
+            else
+            {
+                autoSendMsg.IsEnabled = true;
+            }
+
         }
 
 
@@ -289,17 +284,26 @@ namespace kbox
 
             sendMsg.Text = "";
 
+            autoSendType.SelectedIndex = Properties.Settings.Default.AUTO_SEND_TYPE;
+            autoSendSelector = (AutoSendSelector)Properties.Settings.Default.AUTO_SEND_TYPE;
+
+            if (autoSendSelector == AutoSendSelector.Receive)
+            {
+                autoSendMsg.IsEnabled = false;
+            }
+            else
+            {
+                autoSendMsg.IsEnabled = true;
+            }
+
             autoSendMsg.Text = Properties.Settings.Default.AUTO_SEND_MSG;
-            autoSendFlag = Properties.Settings.Default.AUTO_SEND_FLAG;
+            autoSendFlag = !Properties.Settings.Default.AUTO_SEND_FLAG;  // 토글 방식이라 false값으로 돌리고 함수 호출
             autoSendMsgContent = Properties.Settings.Default.AUTO_SEND_MSG;
 
-            autoSendSetting();
-
+            AutoSendSetting();
 
             controller.IsEnabled = false;
-
         }
-
 
 
         /// <summary>
@@ -307,61 +311,44 @@ namespace kbox
         /// </summary>
         private void Start()
         {
-
             string IP = ipAddr.Text.Trim();
             int PORT = int.Parse(portNum.Text.Trim());
 
-
             // 아이피 정합성 검사
-            IPAddress ipCheck;
-            bool vaild = !string.IsNullOrEmpty(IP) && IPAddress.TryParse(IP, out ipCheck);
+            bool vaild = !string.IsNullOrEmpty(IP) && IPAddress.TryParse(IP, out IPAddress ipCheck);
 
             if (!vaild)
             {
-                appendLog("잘못된 IP 형식");
+                AppendLog("잘못된 IP 형식");
                 return;
             }
-
-            log.Document.Blocks.Clear();
-
 
             if (runTypeSelector == RunTypeSelector.Server)
             {
                 Server.Start(IP, PORT);
 
-                // 서버 상태 확인
-                serverStateThread = new Thread(ServerStateCheck);
-                serverStateThread.IsBackground = true;
-                serverStateThread.Start();
-
                 // 프로그램(서버)에 접속한 클라이언트 확인
-                connCountThread = new Thread(GetConnCount);
-                connCountThread.IsBackground = true;
+                connCountThread = new Thread(GetConnCount)
+                {
+                    IsBackground = true
+                };
                 connCountThread.Start();
-
             }
             else
             {
                 Client.Start(IP, PORT);
 
-                // 클라이언트 상태 확인
-                clientStateThread = new Thread(ClientStateCheck);
-                clientStateThread.IsBackground = true;
-                clientStateThread.Start();
-
                 // 서버에 접속한 상태 표시
-                connStateThread = new Thread(GetConnState);
-                connStateThread.IsBackground = true;
+                connStateThread = new Thread(GetConnState)
+                {
+                    IsBackground = true
+                };
                 connStateThread.Start();
-
             }
 
             RunSetting();
             SettingSave();
-
-            //openBtn.Content = "중지";
         }
-
 
 
         /// <summary>
@@ -369,22 +356,19 @@ namespace kbox
         /// </summary>
         private void Stop()
         {
+            startFlag = false;
 
             if (runTypeSelector == RunTypeSelector.Server)
             {
+    
                 Server.Stop();
-
-                connCountThread.Abort();
             }
             else
-            {
+            {                
                 Client.Stop();
             }
 
-
             RunSetting();
-
-            //openBtn.Content = "시작";            
         }
 
 
@@ -392,7 +376,7 @@ namespace kbox
         /// 로그에 출력
         /// </summary>
         /// <param name="content"></param>
-        public void appendLog(string content)
+        public void AppendLog(string content)
         {
             Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(delegate
             {
@@ -400,40 +384,6 @@ namespace kbox
                 log.ScrollToEnd();
                 receiveData.Text = content;
             }));
-        }
-
-
-        /// <summary>
-        /// 서버 상태 확인
-        /// </summary>
-        private void ServerStateCheck()
-        {
-            while (true)
-            {
-                if (!Server.State())
-                {
-                    Stop();
-                }
-
-                Thread.Sleep(1000);
-            }
-        }
-
-
-        /// <summary>
-        /// 클라이언트 상태 확인
-        /// </summary>
-        private void ClientStateCheck()
-        {
-            while (true)
-            {
-                if (!Client.State())
-                {
-                    Stop();
-                }
-
-                Thread.Sleep(1000);
-            }
         }
 
 
@@ -471,6 +421,41 @@ namespace kbox
         }
 
 
+        /// <summary>
+        /// 인코딩 변경
+        /// </summary>
+        /// <param name="combbox"></param>
+        private void Encoding_Selector(ComboBox combbox)
+        {
+            // 초기화를 하지 않으면 하단 if문에서 에러
+            EncodingSelector es = EncodingSelector.UTF8;
+
+
+            switch (combbox.SelectedIndex)
+            {
+                case 0:
+                    es = EncodingSelector.UTF8;
+                    break;
+
+                case 1:
+                    es = EncodingSelector.UNICODE;
+                    break;
+
+                case 2:
+                    es = EncodingSelector.EUCKR;
+                    break;
+            }
+
+            if (combbox.Name.Equals("mainEncoding"))
+            {
+                mainEncodingSelect = es;
+            }
+            else
+            {
+                sendEncodingSelect = es;
+            }
+        }
+
 
         /// <summary>
         /// 설정 저장 - 서버나 클라이언트를 시작할때마다 저장
@@ -484,6 +469,7 @@ namespace kbox
             Properties.Settings.Default.SEND_ENCODING = sendEncoding.SelectedIndex;
             Properties.Settings.Default.AUTO_SEND_MSG = autoSendMsg.Text.Trim();
             Properties.Settings.Default.AUTO_SEND_FLAG = autoSendFlag;
+            Properties.Settings.Default.AUTO_SEND_TYPE = autoSendType.SelectedIndex;
 
             Properties.Settings.Default.Save();
         }
@@ -494,7 +480,6 @@ namespace kbox
         /// </summary>
         private void RunSetting()
         {
-
             Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(delegate
             {
                 runType.IsEnabled = !startFlag;
@@ -503,15 +488,15 @@ namespace kbox
                 mainEncoding.IsEnabled = !startFlag;
                 controller.IsEnabled = startFlag;
 
+                log.Document.Blocks.Clear();
+
                 if (startFlag)
                 {
                     openBtn.Content = "중지";
-                    log.Document.Blocks.Clear();
                 }
                 else
                 {
                     openBtn.Content = "시작";
-                    //log.Document.Blocks.Clear();
                     receiveData.Text = "데이터 없음";
                     state.Text = "미접속";
                 }
@@ -519,23 +504,31 @@ namespace kbox
         }
 
 
-        // 자동 전송 설정
-        private void autoSendSetting()
+        /// <summary>
+        /// 자동 전송 설정
+        /// </summary>
+        private void AutoSendSetting()
         {
             if (!autoSendFlag)
             {
                 autoSendFlag = true;
                 autoSend.Content = "자동 전송 ON";
+
+                autoSendType.IsEnabled = false;
+                autoSendMsgContent = autoSendMsg.Text.Trim();                
+                autoSendMsg.IsEnabled = false;
+
+                SettingSave();
             }
             else
             {
                 autoSendFlag = false;
                 autoSend.Content = "자동 전송 OFF";
+                autoSendType.IsEnabled = true;
+                autoSendMsg.IsEnabled = true;
             }
-
-            autoSendMsgContent = autoSendMsg.Text.Trim();
-            SettingSave();
         }
+
 
     }
 }

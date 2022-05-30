@@ -106,5 +106,17 @@ namespace kbox.Properties {
                 this["SEND_ENCODING"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int AUTO_SEND_TYPE {
+            get {
+                return ((int)(this["AUTO_SEND_TYPE"]));
+            }
+            set {
+                this["AUTO_SEND_TYPE"] = value;
+            }
+        }
     }
 }

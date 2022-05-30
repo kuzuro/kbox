@@ -2,11 +2,8 @@
 using kbox.Utils;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading;
 
 namespace kbox.Model
 {
@@ -27,7 +24,6 @@ namespace kbox.Model
         /// </summary>
         static public void Start(string IP, int PORT)
         {
-
             try
             {
                 ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -39,23 +35,17 @@ namespace kbox.Model
                 ServerSocket.Listen(20);
 
                 SocketAsyncEventArgs args = new SocketAsyncEventArgs();
-
                 args.Completed += new EventHandler<SocketAsyncEventArgs>(Accept);
                 ServerSocket.AcceptAsync(args);
 
-
                 serverState = true;
                 mw.startFlag = true;
-
             }
             catch (Exception ex)
             {
-                mw.appendLog(string.Concat("실패 : ", ex.Message));
-
+                Console.WriteLine(ex.ToString());
                 Stop();
             }
-
-
         }
 
         /// <summary>
@@ -67,7 +57,6 @@ namespace kbox.Model
             {
                 for (int i = 0; i < ClientSocketList.Count; i++)
                 {
-
                     if (ClientSocketList[i].Connected)
                     {
                         ClientSocketList[i].Disconnect(false);
@@ -105,16 +94,15 @@ namespace kbox.Model
             {
                 if (ClientSocketList != null)
                 {
-
-
                     Socket ClientSocket = e.AcceptSocket;
                     ClientSocketList.Add(ClientSocket);
                     buffer = new byte[bufferSize];
 
+                    // 서버 접속을 감지
                     SocketAsyncEventArgs args = new SocketAsyncEventArgs();
                     args.SetBuffer(buffer, 0, bufferSize);
                     args.UserToken = ClientSocketList;
-                    args.Completed += new EventHandler<SocketAsyncEventArgs>(Receive);
+                    args.Completed += new EventHandler<SocketAsyncEventArgs>(Receive);  // 감지되면 메서드 실행
                     ClientSocket.ReceiveAsync(args);
 
                     e.AcceptSocket = null;
@@ -126,35 +114,31 @@ namespace kbox.Model
             catch (SocketException ex)
             {
                 Console.WriteLine(ex.Message);
+                Stop();
             }
         }
 
 
+        /// <summary>
+        /// 서버 접속이 감지되면 실행
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         static private void Receive(object sender, SocketAsyncEventArgs e)
         {
-
             try
             {
-
                 Socket ClientSocket = (Socket)sender;
 
                 if (ClientSocket.Connected && (e.BytesTransferred > 0))
                 {
-
                     buffer = e.Buffer;
 
-                    string data = EncodingConverter.ConvertString(mw.mainEncodingSelect, buffer).Replace("\0", "");
-
-                    mw.appendLog(data);
-
-                    for (int i = 0; i < buffer.Length; i++)
-                    {
-                        buffer[i] = 0;
-                    }
+                    string mreceiveMsg = EncodingConverter.ConvertString(mw.mainEncodingSelect, buffer).Replace("\0", "");
+                    mw.AppendLog(mreceiveMsg);
 
                     e.SetBuffer(buffer, 0, bufferSize);
                     ClientSocket.ReceiveAsync(e);
-
 
                     // 자동 전송
                     if (mw.autoSendFlag)
@@ -163,31 +147,30 @@ namespace kbox.Model
                     }
 
                     ServerInfo();
-
+                    
+                    // 사용한 버퍼를 0으로 초기화
+                    for (int i = 0; i < buffer.Length; i++)
+                    {
+                        buffer[i] = 0;
+                    }                
                 }
                 else
                 {
-                    //ClientSocket.Shutdown(SocketShutdown.Both);
-                    //ClientSocket.Disconnect(false);
-                    //ClientSocketList.Remove(ClientSocket);
-
-
                     if (ClientSocketList != null)
                     {
                         ClientSocketList.Remove(ClientSocket);
                     }
 
-
-                    mw.appendLog(string.Concat("[접속 해제 : ", ClientSocket.RemoteEndPoint.ToString(), "]"));
+                    mw.AppendLog(string.Concat("[접속 해제 : ", ClientSocket.RemoteEndPoint.ToString(), "]"));
 
                     ServerInfo();
                 }
             }
             catch(Exception ex)
             {
-                Stop();
-                mw.appendLog(string.Concat("에러", ex.Message));
+                Console.WriteLine(ex.ToString());
 
+                Stop();                
                 ServerInfo();
             }
         }
@@ -198,11 +181,23 @@ namespace kbox.Model
         /// </summary>
         static private void AutoSend()
         {
-            byte[] sendData = EncodingConverter.ConvertByte(mw.sendEncodingSelect, mw.autoSendMsgContent);
-
-            for (int i = 0; i < ClientSocketList.Count; i++)
+            if(mw.autoSendSelector == AutoSendSelector.Receive)
             {
-                ClientSocketList[i].Send(sendData, sendData.Length, SocketFlags.None);
+                byte[] sendData = buffer;
+
+                for (int i = 0; i < ClientSocketList.Count; i++)
+                {
+                    ClientSocketList[i].Send(sendData, sendData.Length, SocketFlags.None);
+                }
+            }
+            else
+            {
+                byte[] sendData = EncodingConverter.ConvertByte(mw.sendEncodingSelect, mw.autoSendMsgContent);
+
+                for (int i = 0; i < ClientSocketList.Count; i++)
+                {
+                    ClientSocketList[i].Send(sendData, sendData.Length, SocketFlags.None);
+                }
             }
         }
 
@@ -217,7 +212,7 @@ namespace kbox.Model
 
             for (int i = 0; i < ClientSocketList.Count; i++)
             {
-                ClientSocketList[i].Send(sendData, sendData.Length, SocketFlags.None);
+                ClientSocketList[i].Send(sendData, 0, sendData.Length, SocketFlags.None);
             }
         }
 
@@ -228,8 +223,16 @@ namespace kbox.Model
         static private void ServerInfo()
         {
             // 접속자 갱신
-            connCount = ClientSocketList.Count;
+            if (ClientSocketList != null)
+            {
+                connCount = ClientSocketList.Count;
+            }
+            else
+            {
+                connCount = 0;
+            }
         }
+
 
     }
 }
