@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 
 namespace kbox.Model
 {
@@ -19,7 +20,6 @@ namespace kbox.Model
         static private byte[] buffer;
         static private int bufferSize = 1024;
         static MainWindow mw = (MainWindow)System.Windows.Application.Current.MainWindow;
-
 
 
         /// <summary>
@@ -43,36 +43,38 @@ namespace kbox.Model
                 args.Completed += new EventHandler<SocketAsyncEventArgs>(Accept);
                 ServerSocket.AcceptAsync(args);
 
+
+                serverState = true;
+                mw.startFlag = true;
+
             }
             catch (Exception ex)
             {
-                mw.appendLog("서버 시작 실패");
+                mw.appendLog(string.Concat("실패 : ", ex.Message));
+
                 Stop();
             }
 
 
         }
 
-        static public bool State()
-        {
-            return serverState;
-        }
-
-
         /// <summary>
         /// 서버 종료
         /// </summary>
         static public void Stop()
         {
-            for (int i = 0; i < ClientSocketList.Count; i++)
+            if(ClientSocketList != null)
             {
-
-                if (ClientSocketList[i].Connected)
+                for (int i = 0; i < ClientSocketList.Count; i++)
                 {
-                    ClientSocketList[i].Disconnect(false);
-                }
 
-                ClientSocketList[i].Dispose();
+                    if (ClientSocketList[i].Connected)
+                    {
+                        ClientSocketList[i].Disconnect(false);
+                    }
+
+                    ClientSocketList[i].Dispose();
+                }
             }
 
             ClientSocketList = null;
@@ -81,8 +83,20 @@ namespace kbox.Model
             {
                 ServerSocket.Dispose();
             }
+
+            serverState = false;
+            mw.startFlag = false;
         }
 
+
+        /// <summary>
+        /// 서버 동작 상태
+        /// </summary>
+        /// <returns></returns>
+        static public bool State()
+        {
+            return serverState;
+        }
 
 
         static private void Accept(object sender, SocketAsyncEventArgs e)
@@ -118,40 +132,61 @@ namespace kbox.Model
 
         static private void Receive(object sender, SocketAsyncEventArgs e)
         {
-            Socket ClientSocket = (Socket)sender; 
 
-            if(ClientSocket.Connected && (e.BytesTransferred > 0))
+            try
             {
 
-                buffer = e.Buffer;
+                Socket ClientSocket = (Socket)sender;
 
-                string data = EncodingConverter.ConvertString(mw.mainEncodingSelect, buffer);
-                
-                mw.appendLog(data);
-
-                for (int i = 0; i < buffer.Length; i++)
+                if (ClientSocket.Connected && (e.BytesTransferred > 0))
                 {
-                    buffer[i] = 0;
+
+                    buffer = e.Buffer;
+
+                    string data = EncodingConverter.ConvertString(mw.mainEncodingSelect, buffer).Replace("\0", "");
+
+                    mw.appendLog(data);
+
+                    for (int i = 0; i < buffer.Length; i++)
+                    {
+                        buffer[i] = 0;
+                    }
+
+                    e.SetBuffer(buffer, 0, bufferSize);
+                    ClientSocket.ReceiveAsync(e);
+
+
+                    // 자동 전송
+                    if (mw.autoSendFlag)
+                    {
+                        AutoSend();
+                    }
+
+                    ServerInfo();
+
                 }
-
-                e.SetBuffer(buffer, 0, bufferSize);
-                ClientSocket.ReceiveAsync(e);
-
-
-                // 자동 전송
-                if(mw.autoSendFlag)
+                else
                 {
-                    AutoSend();
+                    //ClientSocket.Shutdown(SocketShutdown.Both);
+                    //ClientSocket.Disconnect(false);
+                    //ClientSocketList.Remove(ClientSocket);
+
+
+                    if (ClientSocketList != null)
+                    {
+                        ClientSocketList.Remove(ClientSocket);
+                    }
+
+
+                    mw.appendLog(string.Concat("[접속 해제 : ", ClientSocket.RemoteEndPoint.ToString(), "]"));
+
+                    ServerInfo();
                 }
-
-                ServerInfo();
-
             }
-            else {
-
-                ClientSocket.Disconnect(false);
-                ClientSocketList.Remove(ClientSocket);
-                mw.appendLog(string.Concat("[접속 해제 : ", ClientSocket.RemoteEndPoint.ToString(), "]"));
+            catch(Exception ex)
+            {
+                Stop();
+                mw.appendLog(string.Concat("에러", ex.Message));
 
                 ServerInfo();
             }
@@ -163,7 +198,7 @@ namespace kbox.Model
         /// </summary>
         static private void AutoSend()
         {
-            byte[] sendData = EncodingConverter.ConvertByte(mw.sendEncodingSelect, mw.autoSendContent);
+            byte[] sendData = EncodingConverter.ConvertByte(mw.sendEncodingSelect, mw.autoSendMsgContent);
 
             for (int i = 0; i < ClientSocketList.Count; i++)
             {

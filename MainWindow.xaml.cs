@@ -15,12 +15,16 @@ namespace kbox
     /// MainWindow.xaml에 대한 상호 작용 논리
     /// </summary>
     public partial class MainWindow : Window
-    {
-        
+    {        
+
+        // 프로그램의 동작 여부. Server와 Client에서 제어
         public bool startFlag = false;
 
         public bool autoSendFlag = false;
-        public string autoSendContent = "";
+        public string autoSendMsgContent = "";
+
+        private Thread serverStateThread;
+        private Thread clientStateThread;
 
         private Thread connCountThread;
         private Thread connStateThread;
@@ -102,39 +106,7 @@ namespace kbox
         #endregion
 
 
-        /// <summary>
-        /// 초기화
-        /// </summary>
-        private void Init()
-        {
-            runType.SelectedIndex = Properties.Settings.Default.RUN_TYPE;
-            runTypeSelector = (RunTypeSelector)Properties.Settings.Default.RUN_TYPE;
-
-            // 프로퍼티에서 불러오도록 수정
-            ipAddr.Text = Properties.Settings.Default.IP;
-            portNum.Text = Properties.Settings.Default.PORT.ToString();
-
-            openBtn.Visibility = Visibility.Visible;
-
-            mainEncoding.SelectedIndex = Properties.Settings.Default.MAIN_ENCODING;
-            mainEncodingSelect = (EncodingSelector)0;
-                
-            state.Text = "미접속";
-
-            log.Document.Blocks.Clear();
-            receiveData.Text = "데이터 없음";
-
-            sendEncoding.SelectedIndex = Properties.Settings.Default.SEND_ENCODING;
-            sendEncodingSelect = (EncodingSelector)Properties.Settings.Default.SEND_ENCODING;
-
-            sendMsg.Text = "";
-
-            autoSendMsg.Text = Properties.Settings.Default.AUTO_SEND_MSG;
-            autoSendFlag = Properties.Settings.Default.AUTO_SEND_FLAG;
-            
-            controller.IsEnabled = false;
-
-        }
+        #region 컨트롤 제어
 
 
         /// <summary>
@@ -146,136 +118,21 @@ namespace kbox
         {
             try
             {
-
-                RunTypeSelector rt = (RunTypeSelector)runType.SelectedIndex;
-
                 if (!startFlag)
                 {
-
-                    string IP = ipAddr.Text.Trim();
-                    int PORT = int.Parse(portNum.Text.Trim());
-
-
-                    // 아이피 정합성 검사
-                    IPAddress ipCheck;
-                    bool vaild = !string.IsNullOrEmpty(IP) && IPAddress.TryParse(IP, out ipCheck);
-
-                    if(!vaild)
-                    {
-                        appendLog("잘못된 IP 형식");
-                        return;
-                    }
-
-                    log.Document.Blocks.Clear();
-
-
-                    if (rt == RunTypeSelector.Server)
-                    {
-                        Server.Start(IP, PORT);
-
-                        // 프로그램(서버)에 접속한 클라이언트 확인
-                        connCountThread = new Thread(getConnCount);
-                        connCountThread.IsBackground = true;
-                        connCountThread.Start();
-                    }
-                    else
-                    {
-                        Client.Start(IP, PORT);
-
-                        // 서버에 접속한 상태 표시
-                        connStateThread = new Thread(getConnState);
-                        connStateThread.IsBackground = true;
-                        connStateThread.Start();
-
-                    }
-
-                    startFlag = true;
-
-                    RunSetting();
-                    SettingSave();
-
-                    openBtn.Content = "중지";
+                    Start();
                 }
                 else
                 {
-                    if (rt == RunTypeSelector.Server)
-                    {
-                        Server.Stop();
-
-                        connCountThread.Abort();
-                    }
-                    else
-                    {
-                        Client.Stop();
-                    }
-
-                    log.Document.Blocks.Clear();
-                    receiveData.Text = "데이터 없음";
-
-                    state.Text = "미접속";
-
-                    startFlag = false;
-                    RunSetting();
-
-                    openBtn.Content = "시작";
+                    Stop();
                 }
 
             }
             catch (Exception ex)
             {
-                appendLog("시작 실패");
+                //appendLog("시작 실패");
             }
         }
-
-
-        /// <summary>
-        /// 로그에 출력
-        /// </summary>
-        /// <param name="content"></param>
-        public void appendLog(string content)
-        {
-            Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(delegate
-            {
-                log.AppendText(content + "\r");
-                log.ScrollToEnd();
-                receiveData.Text = content;
-            }));
-        }
-
-
-        /// <summary>
-        /// 서버 접속자 표시
-        /// </summary>
-        private void getConnCount()
-        {
-            while(startFlag)
-            {
-                Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(delegate
-                {
-                    state.Text = string.Concat("접속(", Server.connCount, ")");
-                }));
-
-                Thread.Sleep(1000);
-            }       
-        }
-
-
-        /// <summary>
-        /// 접속 상태 표시
-        /// </summary>
-        private void getConnState()
-        {
-            while (startFlag)
-            {
-                Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(delegate
-                {
-                    state.Text = string.Concat(Client.connState);
-                }));
-
-                Thread.Sleep(1000);
-            }
-        }
-
 
 
         /// <summary>
@@ -285,7 +142,7 @@ namespace kbox
         /// <param name="e"></param>
         private void runType_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            switch(runType.SelectedIndex)
+            switch (runType.SelectedIndex)
             {
                 case 0:
                     runTypeSelector = RunTypeSelector.Server;
@@ -353,10 +210,7 @@ namespace kbox
         /// <param name="e"></param>
         private void send_Click(object sender, RoutedEventArgs e)
         {
-
-            RunTypeSelector rt = (RunTypeSelector)runType.SelectedIndex;
-
-            if (rt == RunTypeSelector.Server)
+            if (runTypeSelector == RunTypeSelector.Server)
             {
                 Server.Send(sendMsg.Text.Trim());
             }
@@ -366,7 +220,7 @@ namespace kbox
             }
 
 
-                
+
         }
 
 
@@ -377,18 +231,7 @@ namespace kbox
         /// <param name="e"></param>
         private void autoSend_Click(object sender, RoutedEventArgs e)
         {
-            if (!autoSendFlag)
-            {
-                autoSendFlag = true;
-                autoSend.Content = "자동 전송 ON";
-                autoSendContent = autoSendMsg.Text.Trim();
-            }
-            else
-            {
-                autoSendFlag = false;
-                autoSend.Content = "자동 전송 OFF";
-                autoSendContent = "";
-            }
+            autoSendSetting();
         }
 
 
@@ -402,6 +245,231 @@ namespace kbox
             log.Document.Blocks.Clear();
             receiveData.Text = "데이터 없음";
         }
+
+
+        /// <summary>
+        /// 포트번호 입력 마스크
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void portNum_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            Regex regex = new Regex("[^0-9]+");
+            e.Handled = regex.IsMatch(e.Text);
+        }
+
+
+        #endregion
+
+
+        /// <summary>
+        /// 초기화
+        /// </summary>
+        private void Init()
+        {
+            runType.SelectedIndex = Properties.Settings.Default.RUN_TYPE;
+            runTypeSelector = (RunTypeSelector)Properties.Settings.Default.RUN_TYPE;
+
+            // 프로퍼티에서 불러오도록 수정
+            ipAddr.Text = Properties.Settings.Default.IP;
+            portNum.Text = Properties.Settings.Default.PORT.ToString();
+
+            openBtn.Visibility = Visibility.Visible;
+
+            mainEncoding.SelectedIndex = Properties.Settings.Default.MAIN_ENCODING;
+            mainEncodingSelect = (EncodingSelector)0;
+                
+            state.Text = "미접속";
+
+            log.Document.Blocks.Clear();
+            receiveData.Text = "데이터 없음";
+
+            sendEncoding.SelectedIndex = Properties.Settings.Default.SEND_ENCODING;
+            sendEncodingSelect = (EncodingSelector)Properties.Settings.Default.SEND_ENCODING;
+
+            sendMsg.Text = "";
+
+            autoSendMsg.Text = Properties.Settings.Default.AUTO_SEND_MSG;
+            autoSendFlag = Properties.Settings.Default.AUTO_SEND_FLAG;
+            autoSendMsgContent = Properties.Settings.Default.AUTO_SEND_MSG;
+
+            autoSendSetting();
+
+
+            controller.IsEnabled = false;
+
+        }
+
+
+
+        /// <summary>
+        /// 동작 시작
+        /// </summary>
+        private void Start()
+        {
+
+            string IP = ipAddr.Text.Trim();
+            int PORT = int.Parse(portNum.Text.Trim());
+
+
+            // 아이피 정합성 검사
+            IPAddress ipCheck;
+            bool vaild = !string.IsNullOrEmpty(IP) && IPAddress.TryParse(IP, out ipCheck);
+
+            if (!vaild)
+            {
+                appendLog("잘못된 IP 형식");
+                return;
+            }
+
+            log.Document.Blocks.Clear();
+
+
+            if (runTypeSelector == RunTypeSelector.Server)
+            {
+                Server.Start(IP, PORT);
+
+                // 서버 상태 확인
+                serverStateThread = new Thread(ServerStateCheck);
+                serverStateThread.IsBackground = true;
+                serverStateThread.Start();
+
+                // 프로그램(서버)에 접속한 클라이언트 확인
+                connCountThread = new Thread(GetConnCount);
+                connCountThread.IsBackground = true;
+                connCountThread.Start();
+
+            }
+            else
+            {
+                Client.Start(IP, PORT);
+
+                // 클라이언트 상태 확인
+                clientStateThread = new Thread(ClientStateCheck);
+                clientStateThread.IsBackground = true;
+                clientStateThread.Start();
+
+                // 서버에 접속한 상태 표시
+                connStateThread = new Thread(GetConnState);
+                connStateThread.IsBackground = true;
+                connStateThread.Start();
+
+            }
+
+            RunSetting();
+            SettingSave();
+
+            //openBtn.Content = "중지";
+        }
+
+
+
+        /// <summary>
+        /// 동장 중지
+        /// </summary>
+        private void Stop()
+        {
+
+            if (runTypeSelector == RunTypeSelector.Server)
+            {
+                Server.Stop();
+
+                connCountThread.Abort();
+            }
+            else
+            {
+                Client.Stop();
+            }
+
+
+            RunSetting();
+
+            //openBtn.Content = "시작";            
+        }
+
+
+        /// <summary>
+        /// 로그에 출력
+        /// </summary>
+        /// <param name="content"></param>
+        public void appendLog(string content)
+        {
+            Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(delegate
+            {
+                log.AppendText(content + "\r");
+                log.ScrollToEnd();
+                receiveData.Text = content;
+            }));
+        }
+
+
+        /// <summary>
+        /// 서버 상태 확인
+        /// </summary>
+        private void ServerStateCheck()
+        {
+            while (true)
+            {
+                if (!Server.State())
+                {
+                    Stop();
+                }
+
+                Thread.Sleep(1000);
+            }
+        }
+
+
+        /// <summary>
+        /// 클라이언트 상태 확인
+        /// </summary>
+        private void ClientStateCheck()
+        {
+            while (true)
+            {
+                if (!Client.State())
+                {
+                    Stop();
+                }
+
+                Thread.Sleep(1000);
+            }
+        }
+
+
+        /// <summary>
+        /// 서버 접속자 표시
+        /// </summary>
+        private void GetConnCount()
+        {
+            while(startFlag)
+            {
+                Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(delegate
+                {
+                    state.Text = string.Concat("접속(", Server.connCount, ")");
+                }));
+
+                Thread.Sleep(1000);
+            }       
+        }
+
+
+        /// <summary>
+        /// 접속 상태 표시
+        /// </summary>
+        private void GetConnState()
+        {
+            while (startFlag)
+            {
+                Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(delegate
+                {
+                    state.Text = string.Concat(Client.connState);
+                }));
+
+                Thread.Sleep(1000);
+            }
+        }
+
 
 
         /// <summary>
@@ -426,23 +494,48 @@ namespace kbox
         /// </summary>
         private void RunSetting()
         {
-            runType.IsEnabled = !startFlag;
-            ipAddr.IsEnabled = !startFlag;
-            portNum.IsEnabled = !startFlag;
-            mainEncoding.IsEnabled = !startFlag;
-            controller.IsEnabled = startFlag;
+
+            Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(delegate
+            {
+                runType.IsEnabled = !startFlag;
+                ipAddr.IsEnabled = !startFlag;
+                portNum.IsEnabled = !startFlag;
+                mainEncoding.IsEnabled = !startFlag;
+                controller.IsEnabled = startFlag;
+
+                if (startFlag)
+                {
+                    openBtn.Content = "중지";
+                    log.Document.Blocks.Clear();
+                }
+                else
+                {
+                    openBtn.Content = "시작";
+                    //log.Document.Blocks.Clear();
+                    receiveData.Text = "데이터 없음";
+                    state.Text = "미접속";
+                }
+            }));
         }
 
 
-        /// <summary>
-        /// 포트번호 입력 마스크
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void portNum_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        // 자동 전송 설정
+        private void autoSendSetting()
         {
-            Regex regex = new Regex("[^0-9]+");
-            e.Handled = regex.IsMatch(e.Text);
+            if (!autoSendFlag)
+            {
+                autoSendFlag = true;
+                autoSend.Content = "자동 전송 ON";
+            }
+            else
+            {
+                autoSendFlag = false;
+                autoSend.Content = "자동 전송 OFF";
+            }
+
+            autoSendMsgContent = autoSendMsg.Text.Trim();
+            SettingSave();
         }
+
     }
 }
