@@ -16,6 +16,8 @@ namespace kbox.Model
 
         static private byte[] buffer;
         static private int bufferSize = 1024;
+        static private string receiveMsg = "";
+
         static MainWindow mw = (MainWindow)System.Windows.Application.Current.MainWindow;
 
 
@@ -94,8 +96,8 @@ namespace kbox.Model
             {
                 if (ClientSocketList != null)
                 {
-                    Socket ClientSocket = e.AcceptSocket;
-                    ClientSocketList.Add(ClientSocket);
+                    Socket clientSocket = e.AcceptSocket;
+                    ClientSocketList.Add(clientSocket);
                     buffer = new byte[bufferSize];
 
                     // 서버 접속을 감지
@@ -103,7 +105,7 @@ namespace kbox.Model
                     args.SetBuffer(buffer, 0, bufferSize);
                     args.UserToken = ClientSocketList;
                     args.Completed += new EventHandler<SocketAsyncEventArgs>(Receive);  // 감지되면 메서드 실행
-                    ClientSocket.ReceiveAsync(args);
+                    clientSocket.ReceiveAsync(args);
 
                     e.AcceptSocket = null;
                     ServerSocket.AcceptAsync(e);
@@ -134,8 +136,8 @@ namespace kbox.Model
                 {
                     buffer = e.Buffer;
 
-                    string mreceiveMsg = EncodingConverter.ConvertString(mw.mainEncodingSelect, buffer).Replace("\0", "");
-                    mw.AppendLog(mreceiveMsg);
+                    receiveMsg = EncodingConverter.ConvertString(mw.mainEncodingSelect, buffer).Replace("\0", "");
+                    mw.AddLog(receiveMsg);
 
                     e.SetBuffer(buffer, 0, bufferSize);
                     ClientSocket.ReceiveAsync(e);
@@ -161,7 +163,7 @@ namespace kbox.Model
                         ClientSocketList.Remove(ClientSocket);
                     }
 
-                    mw.AppendLog(string.Concat("[접속 해제 : ", ClientSocket.RemoteEndPoint.ToString(), "]"));
+                    mw.AddLog(string.Concat("[접속 해제 : ", ClientSocket.RemoteEndPoint.ToString(), "]"));
 
                     ServerInfo();
                 }
@@ -178,12 +180,16 @@ namespace kbox.Model
 
         /// <summary>
         /// 자동 전송
-        /// </summary>
+        /// </summary> 
         static private void AutoSend()
         {
+
             if(mw.autoSendSelector == AutoSendSelector.Receive)
             {
-                byte[] sendData = buffer;
+                // 받은 내용을 그대로 클라이언트에게 전달
+                // 채팅방처럼 동일한 내용을 공유해야할 경우 사용
+
+                byte[] sendData = EncodingConverter.ConvertByte(mw.mainEncodingSelect, receiveMsg);
 
                 for (int i = 0; i < ClientSocketList.Count; i++)
                 {
@@ -192,6 +198,9 @@ namespace kbox.Model
             }
             else
             {
+                // 서버가 입력한 값 전달
+                // 해당 기능을 이용하여 연산 한 값을 리턴하거나 DB 조건조회하여 데이터를 건낼 수 있음
+
                 byte[] sendData = EncodingConverter.ConvertByte(mw.sendEncodingSelect, mw.autoSendMsgContent);
 
                 for (int i = 0; i < ClientSocketList.Count; i++)

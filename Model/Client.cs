@@ -40,7 +40,7 @@ namespace kbox.Model
                 Console.WriteLine(ex.ToString());
 
                 connState = "접속 실패";
-                mw.AppendLog(connState);
+                mw.AddLog(connState);
                 Stop();
             }
         }
@@ -117,7 +117,7 @@ namespace kbox.Model
                 if(readSize > 0)
                 {
                     string data = EncodingConverter.ConvertString(mw.mainEncodingSelect, buffer).Replace("\0", "");
-                    mw.AppendLog(data);
+                    mw.AddLog(data);
                 }
 
                 Receive(readSize);
@@ -157,7 +157,7 @@ namespace kbox.Model
                 }
                 else
                 {
-                    mw.AppendLog("접속이 끊어졌습니다.");
+                    mw.AddLog("접속이 끊어졌습니다.");
                 }
 
             }

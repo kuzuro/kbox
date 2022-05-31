@@ -319,7 +319,7 @@ namespace kbox
 
             if (!vaild)
             {
-                AppendLog("잘못된 IP 형식");
+                AddLog("잘못된 IP 형식");
                 return;
             }
 
@@ -376,7 +376,7 @@ namespace kbox
         /// 로그에 출력
         /// </summary>
         /// <param name="content"></param>
-        public void AppendLog(string content)
+        public void AddLog(string content)
         {
             Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(delegate
             {

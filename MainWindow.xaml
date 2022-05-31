@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:kbox"
         mc:Ignorable="d"        
         Title="MainWindow"         
+        WindowStartupLocation="CenterScreen"
         Style="{StaticResource windowStyle}"        
         >
     <Grid Margin="0">
