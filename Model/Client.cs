@@ -1,30 +1,30 @@
-﻿using kbox.Utils;
+﻿using socket_box.Utils;
 using System;
 using System.Net;
 using System.Net.Sockets;
 
-namespace kbox.Model
+namespace socket_box.Model
 {
     static public class Client
     {
 
-        static private string IP;
-        static private int PORT;
+        private static string IP;
+        private static int PORT;
 
-        static public string connState = "접속 대기";
+        public static string connStateMsg = "접속 대기";
 
-        static private bool clientState = false;
+        private static bool clientState = false;
 
-        static private Socket clientSocket;
-        static private Socket serverSocket;
+        private static Socket clientSocket;
+        private static Socket serverSocket;
 
-        static private byte[] buffer;
-        static private int bufferSize = 1024;
+        private static byte[] buffer;
+        private static int bufferSize = 1024;
 
         static MainWindow mw = (MainWindow)System.Windows.Application.Current.MainWindow;
 
 
-        static public void Start(string _IP, int _PORT)
+        public static void Start(string _IP, int _PORT)
         {
             IP = _IP;
             PORT = _PORT;
@@ -33,20 +33,24 @@ namespace kbox.Model
 
             try
             {
+
+                mw.startFlag = true;
+                clientState = true;
+
                 Connect();
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
 
-                connState = "접속 실패";
-                mw.AddLog(connState);
+                connStateMsg = "접속 실패";
+                mw.AddLog(connStateMsg);
                 Stop();
             }
         }
 
 
-        static public void Stop()
+        public static void Stop()
         {
             try
             {
@@ -55,11 +59,10 @@ namespace kbox.Model
                     serverSocket.Disconnect(false);
                 }
 
-                if(clientSocket != null)
+                if (clientSocket != null)
                 {
                     clientSocket.Disconnect(false);
                 }
-                
             }
             catch (Exception ex)
             {
@@ -74,24 +77,21 @@ namespace kbox.Model
         /// <summary>
         /// 접속 시작
         /// </summary>
-        static private void Connect()
+        private static void Connect()
         {
             serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             serverSocket.BeginConnect(IP, PORT, new AsyncCallback(CallBack), serverSocket);
-
-            mw.startFlag = true;
-            clientState = true;
         }
 
 
-        static private void CallBack(IAsyncResult IAR)
+        private static void CallBack(IAsyncResult IAR)
         {
             try
             {
                 Socket socket = (Socket)IAR.AsyncState;
                 IPEndPoint ipep = (IPEndPoint)socket.RemoteEndPoint;
 
-                connState = "접속중";
+                connStateMsg = "접속중";
 
                 socket.EndConnect(IAR);
 
@@ -107,14 +107,14 @@ namespace kbox.Model
         }
 
 
-        static private void ReceiveCallBack(IAsyncResult IAR)
+        private static void ReceiveCallBack(IAsyncResult IAR)
         {
             try
             {
                 Socket socket = (Socket)IAR.AsyncState;
                 int readSize = socket.EndReceive(IAR);
 
-                if(readSize > 0)
+                if (readSize > 0)
                 {
                     string data = EncodingConverter.ConvertString(mw.mainEncodingSelect, buffer).Replace("\0", "");
                     mw.AddLog(data);
@@ -130,14 +130,14 @@ namespace kbox.Model
         }
 
 
-        static private void Receive(int readSize)
+        private static void Receive(int readSize)
         {
             clientSocket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, new AsyncCallback(ReceiveCallBack), clientSocket);
 
             // 받았던 데이터의 크기만큼 반복해서 0으로 초기화
             for (int i = 0; i < readSize; i++)
             {
-                buffer[i] = (byte)0;
+                buffer[i] = 0;
             }
         }
 
@@ -146,11 +146,11 @@ namespace kbox.Model
         /// 메시지 전송
         /// </summary>
         /// <param name="sendMsg"></param>
-        static public void Send(string sendMsg)
+        public static void Send(string sendMsg)
         {
             try
             {
-                if(clientSocket.Connected)
+                if (clientSocket.Connected)
                 {
                     byte[] sendData = EncodingConverter.ConvertByte(mw.sendEncodingSelect, sendMsg);
                     serverSocket.Send(sendData, sendData.Length, SocketFlags.None);
@@ -159,7 +159,6 @@ namespace kbox.Model
                 {
                     mw.AddLog("접속이 끊어졌습니다.");
                 }
-
             }
             catch (Exception ex)
             {
@@ -172,7 +171,7 @@ namespace kbox.Model
         /// 클라이언트 동작 상태
         /// </summary>
         /// <returns></returns>
-        static public bool State()
+        public static bool State()
         {
             return clientState;
         }

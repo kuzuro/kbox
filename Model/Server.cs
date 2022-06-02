@@ -1,22 +1,24 @@
-﻿using kbox.EnumClass;
-using kbox.Utils;
+﻿using socket_box.Utils;
+using socket_box.EnumClass;
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 
-namespace kbox.Model
+namespace socket_box.Model
 {
     static public class Server
     {
-        static private bool serverState = false;
-        static public int connCount = 0;
-        static public Socket ServerSocket;
-        static private List<Socket> ClientSocketList;
+        private static bool serverState = false;
+        public static int connectCount = 0;
+        public static Socket ServerSocket;
+        private static List<Socket> ClientSocketList;
 
-        static private byte[] buffer;
-        static private int bufferSize = 1024;
-        static private string receiveMsg = "";
+        private static byte[] buffer;
+        private static int bufferSize = 1024;
+        private static string receiveMsg = "";
+
+        private static Socket recentClient;
 
         static MainWindow mw = (MainWindow)System.Windows.Application.Current.MainWindow;
 
@@ -24,10 +26,13 @@ namespace kbox.Model
         /// <summary>
         /// 서버 시작
         /// </summary>
-        static public void Start(string IP, int PORT)
+        public static void Start(string IP, int PORT)
         {
             try
             {
+                serverState = true;
+                mw.startFlag = true;
+
                 ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 ClientSocketList = new List<Socket>();
 
@@ -39,9 +44,6 @@ namespace kbox.Model
                 SocketAsyncEventArgs args = new SocketAsyncEventArgs();
                 args.Completed += new EventHandler<SocketAsyncEventArgs>(Accept);
                 ServerSocket.AcceptAsync(args);
-
-                serverState = true;
-                mw.startFlag = true;
             }
             catch (Exception ex)
             {
@@ -50,10 +52,11 @@ namespace kbox.Model
             }
         }
 
+
         /// <summary>
         /// 서버 종료
         /// </summary>
-        static public void Stop()
+        public static void Stop()
         {
             if(ClientSocketList != null)
             {
@@ -70,7 +73,7 @@ namespace kbox.Model
 
             ClientSocketList = null;
 
-            if(ServerSocket != null)
+            if (ServerSocket != null)
             {
                 ServerSocket.Dispose();
             }
@@ -84,13 +87,13 @@ namespace kbox.Model
         /// 서버 동작 상태
         /// </summary>
         /// <returns></returns>
-        static public bool State()
+        public static bool State()
         {
             return serverState;
         }
 
 
-        static private void Accept(object sender, SocketAsyncEventArgs e)
+        private static void Accept(object sender, SocketAsyncEventArgs e)
         {
             try
             {
@@ -101,6 +104,8 @@ namespace kbox.Model
                     buffer = new byte[bufferSize];
 
                     // 서버 접속을 감지
+                    mw.AddLog(string.Concat("[ 접속 감지 : ", clientSocket.RemoteEndPoint.ToString(), " ]"));
+
                     SocketAsyncEventArgs args = new SocketAsyncEventArgs();
                     args.SetBuffer(buffer, 0, bufferSize);
                     args.UserToken = ClientSocketList;
@@ -110,7 +115,7 @@ namespace kbox.Model
                     e.AcceptSocket = null;
                     ServerSocket.AcceptAsync(e);
 
-                    ServerInfo();
+                    ServerConnectCheck();
                 }
             }
             catch (SocketException ex)
@@ -126,13 +131,13 @@ namespace kbox.Model
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        static private void Receive(object sender, SocketAsyncEventArgs e)
+        private static void Receive(object sender, SocketAsyncEventArgs e)
         {
             try
             {
-                Socket ClientSocket = (Socket)sender;
+                Socket clientSocket = (Socket)sender;
 
-                if (ClientSocket.Connected && (e.BytesTransferred > 0))
+                if (clientSocket.Connected && (e.BytesTransferred > 0))
                 {
                     buffer = e.Buffer;
 
@@ -140,40 +145,45 @@ namespace kbox.Model
                     mw.AddLog(receiveMsg);
 
                     e.SetBuffer(buffer, 0, bufferSize);
-                    ClientSocket.ReceiveAsync(e);
+                    clientSocket.ReceiveAsync(e);
 
                     // 자동 전송
                     if (mw.autoSendFlag)
                     {
+                        if (mw.autoSendTarget == AutoSendTargetSelector.Specify)
+                        {
+                            recentClient = clientSocket;
+                        }
+
                         AutoSend();
                     }
 
-                    ServerInfo();
-                    
+                    ServerConnectCheck();
+
                     // 사용한 버퍼를 0으로 초기화
                     for (int i = 0; i < buffer.Length; i++)
                     {
                         buffer[i] = 0;
-                    }                
+                    }
                 }
                 else
                 {
                     if (ClientSocketList != null)
                     {
-                        ClientSocketList.Remove(ClientSocket);
+                        ClientSocketList.Remove(clientSocket);
                     }
 
-                    mw.AddLog(string.Concat("[접속 해제 : ", ClientSocket.RemoteEndPoint.ToString(), "]"));
+                    mw.AddLog(string.Concat("[ 접속 해제 : ", clientSocket.RemoteEndPoint.ToString(), " ]"));
 
-                    ServerInfo();
+                    ServerConnectCheck();
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
 
-                Stop();                
-                ServerInfo();
+                Stop();
+                ServerConnectCheck();
             }
         }
 
@@ -181,12 +191,11 @@ namespace kbox.Model
         /// <summary>
         /// 자동 전송
         /// </summary> 
-        static private void AutoSend()
+        private static void AutoSend()
         {
-
-            if(mw.autoSendSelector == AutoSendSelector.Receive)
+            if (mw.autoSendSelector == AutoSendSelector.Receive)
             {
-                // 받은 내용을 그대로 클라이언트에게 전달
+                // 받은 내용을 그대로 클라이언트들에게 전달
                 // 채팅방처럼 동일한 내용을 공유해야할 경우 사용
 
                 byte[] sendData = EncodingConverter.ConvertByte(mw.mainEncodingSelect, receiveMsg);
@@ -202,10 +211,21 @@ namespace kbox.Model
                 // 해당 기능을 이용하여 연산 한 값을 리턴하거나 DB 조건조회하여 데이터를 건낼 수 있음
 
                 byte[] sendData = EncodingConverter.ConvertByte(mw.sendEncodingSelect, mw.autoSendMsgContent);
-
-                for (int i = 0; i < ClientSocketList.Count; i++)
+        
+                
+                // 자동전송 타겟이 All인지 Specify인지 확인
+                if (mw.autoSendTarget == AutoSendTargetSelector.All)
                 {
-                    ClientSocketList[i].Send(sendData, sendData.Length, SocketFlags.None);
+                    // 전체 전송
+                    for (int i = 0; i < ClientSocketList.Count; i++)
+                    {
+                        ClientSocketList[i].Send(sendData, sendData.Length, SocketFlags.None);
+                    }
+                }
+                else
+                {
+                    // 전송한 사람에게만 답장
+                    recentClient.Send(sendData, sendData.Length, SocketFlags.None);
                 }
             }
         }
@@ -215,7 +235,7 @@ namespace kbox.Model
         /// 전송
         /// </summary>
         /// <param name="sendMsg"></param>
-        static public void Send(string sendMsg)
+        public static void Send(string sendMsg)
         {
             byte[] sendData = EncodingConverter.ConvertByte(mw.sendEncodingSelect, sendMsg);
 
@@ -229,16 +249,16 @@ namespace kbox.Model
         /// <summary>
         /// 접속자가 발생하거나 메시지가 오면 동작
         /// </summary>
-        static private void ServerInfo()
+        private static void ServerConnectCheck()
         {
             // 접속자 갱신
             if (ClientSocketList != null)
             {
-                connCount = ClientSocketList.Count;
+                connectCount = ClientSocketList.Count;
             }
             else
             {
-                connCount = 0;
+                connectCount = 0;
             }
         }
 

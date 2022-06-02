@@ -1,10 +1,10 @@
-﻿using kbox.EnumClass;
+﻿using socket_box.EnumClass;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace kbox.Utils
+namespace socket_box.Utils
 {
     static public class EncodingConverter
     {

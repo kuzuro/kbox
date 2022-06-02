@@ -1,9 +1,9 @@
-﻿<Window x:Class="kbox.MainWindow"
+﻿<Window x:Class="socket_box.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:kbox"
+        xmlns:local="clr-namespace:socket_box"
         mc:Ignorable="d"        
         Title="MainWindow"         
         WindowStartupLocation="CenterScreen"
@@ -26,8 +26,9 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0">
-                    <Label Style="{StaticResource titleText}" Content="K BOX"/>
+                    <Label Style="{StaticResource titleText}" Content="SOCKET BOX"/>
                 </StackPanel>
+                
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Name="btn_minimized" Style="{StaticResource transparentButton}" Click="Btn_minimized_Click">
                         <Image Style="{StaticResource minimizedImageButton}" />
@@ -66,8 +67,8 @@
 
                         <StackPanel Grid.Row="0" Grid.Column="0" Width="80" >
                             <ComboBox Name="runType" Style="{StaticResource comboStyle}" Width="80" SelectionChanged="RunType_SelectionChanged">
-                                <ComboBoxItem IsSelected="True">Server</ComboBoxItem>
-                                <ComboBoxItem>Client</ComboBoxItem>
+                                <ComboBoxItem IsSelected="True" Content="Server" />
+                                <ComboBoxItem Content="Client" />
                             </ComboBox>
                         </StackPanel>
 
@@ -86,9 +87,9 @@
                             <StackPanel Orientation="Horizontal">
                                 <StackPanel Width="200">
                                     <ComboBox Name="mainEncoding" Style="{StaticResource comboStyle}" HorizontalAlignment="Left" Width="80" SelectionChanged="MainEncoding_SelectionChanged">
-                                        <ComboBoxItem IsSelected="True">UTF-8</ComboBoxItem>
-                                        <ComboBoxItem>UNICODE</ComboBoxItem>
-                                        <ComboBoxItem>EUC-KR</ComboBoxItem>
+                                        <ComboBoxItem Content="UTF-8" />
+                                        <ComboBoxItem Content="UNICODE" />
+                                        <ComboBoxItem Content="EUC-KR" />
                                     </ComboBox>
                                 </StackPanel>
                                 <StackPanel Width="130">
@@ -133,24 +134,31 @@
 
                             <StackPanel Orientation="Horizontal"  Margin="0, 20, 0, 0">
                                 <ComboBox Name="sendEncoding" Style="{StaticResource comboStyle}" HorizontalAlignment="Left" Width="80" SelectionChanged="SendEncoding_SelectionChanged">
-                                    <ComboBoxItem IsSelected="True">UTF-8</ComboBoxItem>
-                                    <ComboBoxItem>UNICODE</ComboBoxItem>
-                                    <ComboBoxItem>EUC-KR</ComboBoxItem>
+                                    <ComboBoxItem Content="UTF-8" />
+                                    <ComboBoxItem Content="UNICODE" />
+                                    <ComboBoxItem Content="EUC-KR" />
                                 </ComboBox>
                                 <TextBox Name="sendMsg" Style="{StaticResource textBoxStyle}" Width="190" Margin="10, 0, 10, 0" HorizontalContentAlignment="Left"/>
                                 <Button Name="send" Style="{StaticResource buttonStyle}" Width="40" Content="전송" Click="Send_Click"/>
                             </StackPanel>
 
-                            <StackPanel Orientation="Horizontal"  Margin="0, 10, 0, 0" >
+                            <StackPanel Name="autoSendControl">                                
+                                <StackPanel Orientation="Horizontal"  Margin="0, 10, 0, 0" >
+                                    <ComboBox Name="autoSendType" Style="{StaticResource comboStyle}" HorizontalAlignment="Left" Width="80" SelectionChanged="AutoSendType_SelectionChanged">
+                                        <ComboBoxItem Content="받은내용" />
+                                        <ComboBoxItem Content="직접입력" />
+                                    </ComboBox>
 
-                                <ComboBox Name="autoSendType" Style="{StaticResource comboStyle}" HorizontalAlignment="Left" Width="80" SelectionChanged="AutoSendType_SelectionChanged">
-                                    <ComboBoxItem IsSelected="True">받은내용</ComboBoxItem>
-                                    <ComboBoxItem>직접입력</ComboBoxItem>
-                                </ComboBox>
+                                    <TextBox Name="autoSendMsg" Style="{StaticResource textBoxStyle}" Width="140" Margin="10, 0, 10, 0" HorizontalContentAlignment="Left"/>
+                                    <Button Name="autoSend" Style="{StaticResource buttonStyle}" Width="90" Content="자동 전송 OFF" Click="AutoSend_Click"/>
+                                </StackPanel>
 
-                                <TextBox Name="autoSendMsg" Style="{StaticResource textBoxStyle}" Width="140" Margin="10, 0, 10, 0" HorizontalContentAlignment="Left"/>
-                                <Button Name="autoSend" Style="{StaticResource buttonStyle}" Width="90" Content="자동 전송 OFF" Click="AutoSend_Click"/>
+                                <StackPanel Orientation="Horizontal" Margin="0, 10, 0, 0">
+                                    <RadioButton Name="allSend" GroupName="autoSsndTarget" Margin="0, 0, 55, 0" Content="클라이언트 전체" Checked="AutoSendTarget_Checked"/>
+                                    <RadioButton Name="specifySend" GroupName="autoSsndTarget" Content="전송받은 클라이언트에게만" Checked="AutoSendTarget_Checked"/>
+                                </StackPanel>                                
                             </StackPanel>
+
                         </StackPanel>
                     </Grid>
                 </StackPanel>

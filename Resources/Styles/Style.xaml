@@ -4,7 +4,7 @@
     <!-- 윈도우 스타일 -->
     <Style x:Key="windowStyle" TargetType="Window">
         <Setter Property="Width" Value="352"/>
-        <Setter Property="Height" Value="475"/>
+        <Setter Property="Height" Value="495"/> <!-- 475 -->
         <Setter Property="ResizeMode" Value="NoResize" />
         <Setter Property="WindowStyle" Value="None" />
         <Setter Property="WindowState" Value="Normal" />
@@ -117,8 +117,7 @@
         <Setter Property="VerticalAlignment" Value="Center"/>
         
     </Style>
-
-    
+   
 
     <!-- 버튼 공통 -->
     <Style x:Key="buttonStyle" TargetType="Button">
@@ -143,12 +142,17 @@
 
 
 
+    <!-- 리치 텍스트(장문) -->
     <Style x:Key="richTextBoxStyle" TargetType="RichTextBox">
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
         <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
         <Setter Property="BorderBrush" Value="#cccccc"/>
         <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+
+    <Style x:Key="radioButtonStyle" TargetType="RadioButton">
+        <Setter Property="FontSize" Value="12"/>
     </Style>
     
 
